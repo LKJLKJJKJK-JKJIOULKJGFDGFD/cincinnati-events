@@ -7,18 +7,60 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #fff; color: #1a1a1a;
-      padding: 24px 20px; max-width: 700px; margin: 0 auto;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: #fff;
+      color: #1a1a1a;
+      padding: 24px 20px;
+      max-width: 700px;
+      margin: 0 auto;
     }
     h1 { font-size: 2rem; font-weight: 700; margin-bottom: 6px; }
     .subtitle { color: #555; font-size: 0.9rem; margin-bottom: 32px; }
-    .note { border: 1px solid #e0e0e0; border-radius: 6px; padding: 16px; color: #555; font-size: 0.95rem; }
+    .date-section { margin-bottom: 32px; }
+    .date-header {
+      font-size: 1.25rem;
+      font-weight: 700;
+      border-bottom: 2px solid #1a1a1a;
+      padding-bottom: 6px;
+      margin-bottom: 12px;
+    }
+    .venue-name {
+      color: #0066cc;
+      font-weight: 600;
+      font-size: 0.95rem;
+      margin: 14px 0 6px;
+    }
+    .event-card {
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .event-card a {
+      text-decoration: none;
+      color: #1a1a1a;
+      font-size: 0.95rem;
+      flex: 1;
+      line-height: 1.4;
+    }
+    .event-card a:hover { color: #0066cc; }
+    .event-time {
+      color: #777;
+      font-size: 0.85rem;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .no-events { color: #666; font-style: italic; }
   </style>
 </head>
 <body>
   <h1>Cincinnati Metro Events</h1>
-  <p class="subtitle">Live music &bull; Comedy &bull; Theater &bull; Greater Cincinnati Metro</p>
-  <div class="note">This site updates daily at 7:30 AM ET. Check back soon for upcoming events.</div>
+  <p class="subtitle">0 upcoming events &bull; Updated March 24, 2026 at 1:26 PM ET</p>
+  
+  <p class="no-events">No upcoming events found. Check back tomorrow.</p>
 </body>
 </html>
