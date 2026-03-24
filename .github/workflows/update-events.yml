@@ -2,9 +2,11 @@ name: Update Events
 
 on:
   schedule:
-    # 12:30 UTC = 7:30 AM EST (Nov–Mar) / 8:30 AM EDT (Mar–Nov)
     - cron: '30 12 * * *'
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
