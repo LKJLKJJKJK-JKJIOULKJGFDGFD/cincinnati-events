@@ -5,6 +5,27 @@ const path = require('path');
 
 const TM_KEY = process.env.TICKETMASTER_API_KEY;
 const SG_CLIENT_ID = process.env.SEATGEEK_CLIENT_ID;
+const KNOWN_EVENTS_PATH = path.join(process.cwd(), 'known-events.json');
+
+// ─── Known Events (new-since-yesterday tracking) ──────────────────────────────
+
+function loadKnownIds() {
+  try {
+    if (!fs.existsSync(KNOWN_EVENTS_PATH)) return null;
+    const data = JSON.parse(fs.readFileSync(KNOWN_EVENTS_PATH, 'utf8'));
+    return new Set(data.eventIds ?? []);
+  } catch {
+    return null;
+  }
+}
+
+function saveKnownIds(events) {
+  const data = {
+    lastUpdated: new Date().toISOString(),
+    eventIds: events.map(e => e.id),
+  };
+  fs.writeFileSync(KNOWN_EVENTS_PATH, JSON.stringify(data, null, 2), 'utf8');
+}
 
 // ─── Date Helpers ─────────────────────────────────────────────────────────────
 
@@ -242,14 +263,7 @@ function esc(str) {
     .replace(/"/g, '&quot;');
 }
 
-function generateHTML(events) {
-  const now = new Date();
-  const etTime = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/New_York',
-    month: 'long', day: 'numeric', year: 'numeric',
-    hour: 'numeric', minute: '2-digit', hour12: true,
-  }).format(now);
-
+function buildEventCards(events) {
   const byDate = {};
   for (const event of events) {
     if (!byDate[event.date]) byDate[event.date] = {};
@@ -257,13 +271,13 @@ function generateHTML(events) {
     byDate[event.date][event.venue].push(event);
   }
 
-  let content = '';
+  let html = '';
   for (const date of Object.keys(byDate).sort()) {
-    content += `\n  <div class="date-section">`;
-    content += `\n    <div class="date-header">${esc(formatDisplayDate(date))}</div>`;
+    html += `\n  <div class="date-section">`;
+    html += `\n    <div class="date-header">${esc(formatDisplayDate(date))}</div>`;
 
     for (const venue of Object.keys(byDate[date]).sort()) {
-      content += `\n    <div class="venue-name">${esc(venue)}</div>`;
+      html += `\n    <div class="venue-name">${esc(venue)}</div>`;
 
       const venueEvents = byDate[date][venue].sort((a, b) =>
         (a.time ?? '23:59') < (b.time ?? '23:59') ? -1 : 1
@@ -271,18 +285,51 @@ function generateHTML(events) {
 
       for (const ev of venueEvents) {
         const timeStr = ev.time ? formatTime(ev.time) : 'TBA';
-        content += `\n    <div class="event-card">`;
-        content += `<a href="${esc(ev.url)}" target="_blank" rel="noopener">${esc(ev.name)}</a>`;
-        content += `<span class="event-time">${esc(timeStr)}</span>`;
-        content += `</div>`;
+        html += `\n    <div class="event-card">`;
+        html += `<a href="${esc(ev.url)}" target="_blank" rel="noopener">${esc(ev.name)}</a>`;
+        html += `<span class="event-time">${esc(timeStr)}</span>`;
+        html += `</div>`;
       }
     }
-    content += `\n  </div>`;
+    html += `\n  </div>`;
+  }
+  return html;
+}
+
+function generateHTML(allEvents, newEvents) {
+  const now = new Date();
+  const etTime = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    month: 'long', day: 'numeric', year: 'numeric',
+    hour: 'numeric', minute: '2-digit', hour12: true,
+  }).format(now);
+
+  let newSection = '';
+  if (newEvents.length > 0) {
+    newSection = `
+  <div class="new-section">
+    <div class="new-section-header">
+      <span class="new-badge">NEW</span>
+      Added Since Yesterday &mdash; ${newEvents.length} event${newEvents.length !== 1 ? 's' : ''}
+    </div>
+    ${buildEventCards(newEvents)}
+  </div>
+  <div class="section-divider"></div>`;
+  } else {
+    newSection = `
+  <div class="new-section">
+    <div class="new-section-header">
+      <span class="new-badge">NEW</span>
+      Added Since Yesterday
+    </div>
+    <p class="no-new-events">No new events added since last update.</p>
+  </div>
+  <div class="section-divider"></div>`;
   }
 
-  if (!content.trim()) {
-    content = '\n  <p class="no-events">No upcoming events found. Check back tomorrow.</p>';
-  }
+  const allSection = allEvents.length > 0
+    ? buildEventCards(allEvents)
+    : '\n  <p class="no-events">No upcoming events found. Check back tomorrow.</p>';
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -301,7 +348,43 @@ function generateHTML(events) {
       margin: 0 auto;
     }
     h1 { font-size: 2rem; font-weight: 700; margin-bottom: 6px; }
-    .subtitle { color: #555; font-size: 0.9rem; margin-bottom: 32px; }
+    .subtitle { color: #555; font-size: 0.9rem; margin-bottom: 28px; }
+    .new-section { margin-bottom: 12px; }
+    .new-section-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #166534;
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 14px;
+    }
+    .new-badge {
+      background: #16a34a;
+      color: #fff;
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+    .no-new-events {
+      color: #666;
+      font-style: italic;
+      font-size: 0.9rem;
+      padding: 0 4px 16px;
+    }
+    .section-divider { border-top: 1px solid #e0e0e0; margin: 24px 0; }
+    .all-section-header {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #555;
+      margin-bottom: 20px;
+    }
     .date-section { margin-bottom: 32px; }
     .date-header {
       font-size: 1.25rem;
@@ -345,8 +428,12 @@ function generateHTML(events) {
 </head>
 <body>
   <h1>Cincinnati Metro Events</h1>
-  <p class="subtitle">${events.length} upcoming events &bull; Updated ${esc(etTime)} ET</p>
-  ${content}
+  <p class="subtitle">${allEvents.length} upcoming events &bull; Updated ${esc(etTime)} ET</p>
+
+  ${newSection}
+
+  <div class="all-section-header">All Upcoming Events</div>
+  ${allSection}
 </body>
 </html>`;
 }
@@ -356,6 +443,10 @@ function generateHTML(events) {
 async function main() {
   console.log('=== Cincinnati Metro Events Fetch ===');
 
+  const knownIds = loadKnownIds();
+  const isFirstRun = knownIds === null;
+  if (isFirstRun) console.log('First run — establishing baseline, no "new" events shown.');
+
   const [tmEvents, sgEvents] = await Promise.all([
     fetchTicketmaster(),
     fetchSeatGeek(),
@@ -364,10 +455,14 @@ async function main() {
   const allEvents = [...tmEvents, ...sgEvents];
   const deduped = deduplicateEvents(allEvents);
   deduped.sort((a, b) => a.dateSortKey.localeCompare(b.dateSortKey));
-
   console.log(`\nTotal after dedup: ${deduped.length} events`);
 
-  const html = generateHTML(deduped);
+  const newEvents = isFirstRun ? [] : deduped.filter(e => !knownIds.has(e.id));
+  console.log(`New since yesterday: ${newEvents.length} events`);
+
+  saveKnownIds(deduped);
+
+  const html = generateHTML(deduped, newEvents);
   const outputPath = path.join(process.cwd(), 'index.html');
   fs.writeFileSync(outputPath, html, 'utf8');
   console.log(`Wrote ${outputPath}`);

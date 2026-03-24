@@ -26,10 +26,10 @@ jobs:
           SEATGEEK_CLIENT_ID: ${{ secrets.SEATGEEK_CLIENT_ID }}
         run: node scripts/fetch-events.js
 
-      - name: Commit and push updated index.html
+      - name: Commit and push updated files
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add index.html
+          git add index.html known-events.json
           git diff --staged --quiet || git commit -m "Update events $(date -u '+%Y-%m-%d %H:%M UTC')"
           git push
