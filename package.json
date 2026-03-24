@@ -1,0 +1,11 @@
+{
+  "name": "cincinnati-events",
+  "version": "1.0.0",
+  "description": "Cincinnati Metro Events Tracker",
+  "scripts": {
+    "update": "node scripts/fetch-events.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
