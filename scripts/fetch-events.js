@@ -33,7 +33,7 @@ function getDateRange() {
   const start = new Date();
   start.setHours(0, 0, 0, 0);
   const end = new Date(start);
-  end.setDate(end.getDate() + 180);
+  end.setDate(end.getDate() + 365);
   return { start, end };
 }
 
